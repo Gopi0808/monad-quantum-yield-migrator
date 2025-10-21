@@ -1,221 +1,618 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monad Quantum Yield Migrator</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: radial-gradient(ellipse at center, #0c0c1a 0%, #000000 100%);
+            min-height: 100vh;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
 
-/**
- * @title Monad Yield Migrator
- * @dev Cross-chain yield optimization using MetaMask Smart Accounts & Delegation
- * Features:
- * - MetaMask Smart Account integration
- * - Permission-based delegation system
- * - Cross-chain yield migration (Monad + Base + Arbitrum)
- * - Gas-aware optimization
- * - Envio monitoring integration
- */
-contract MonadYieldMigrator {
-    
-    // Delegation configuration
-    struct MigrationConfig {
-        address user;                    // MetaMask Smart Account owner
-        address agent;                   // Authorized delegate
-        uint256 maxAmount;              // Maximum amount agent can move
-        string[] allowedChains;         // Chains agent can operate on
-        uint256 minAPYGain;             // Minimum APY gain to trigger migration
-        uint256 cooldownPeriod;         // Time between migrations
-        bool isActive;                  // Whether automation is active
-        uint256 lastMigration;          // Timestamp of last migration
-        uint256 totalOptimized;         // Total value optimized
-    }
-    
-    // State variables
-    mapping(address => MigrationConfig) public migrations;
-    uint256 public totalUsers;
-    uint256 public totalOptimizations;
-    
-    // Events for frontend and Envio monitoring
-    event SmartAccountLinked(address indexed user);
-    event MigrationDelegationCreated(
-        address indexed user,
-        address indexed agent,
-        uint256 maxAmount,
-        uint256 minAPYGain,
-        uint256 cooldownPeriod
-    );
-    event YieldOptimized(
-        address indexed user,
-        string fromChain,
-        string toChain,
-        uint256 amount,
-        uint256 netGain,
-        uint256 timestamp
-    );
-    event AutomationPaused(address indexed user);
-    event DelegationRevoked(address indexed user);
-    
-    /**
-     * @dev Link user's MetaMask Smart Account to the system
-     */
-    function linkSmartAccount() external {
-        require(migrations[msg.sender].user == address(0), "Account already linked");
+        .quantum-interface {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .quantum-field {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%);
+            animation: quantum-pulse 8s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes quantum-pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+
+        .holographic-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 60px 40px;
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+            animation: panel-float 6s ease-in-out infinite;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes panel-float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .quantum-text {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00ff88 0%, #0088ff 50%, #ff0088 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 40px 0;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .step.active .step-number {
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            border-color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .step-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .quantum-button {
+            background: linear-gradient(135deg, #00ff88, #0088ff);
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 255, 136, 0.4);
+        }
+
+        .yield-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+
+        .chain-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .chain-card.best {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .chain-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .chain-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .chain-apy {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #00ff88;
+            margin-bottom: 8px;
+        }
+
+        .chain-gas {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+
+        .net-apy {
+            color: #0088ff;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .best-badge {
+            background: #00ff88;
+            color: black;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .delegation-settings {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 30px;
+            border-radius: 20px;
+            margin: 30px 0;
+            text-align: left;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+        }
+
+        .setting-value {
+            color: #00ff88;
+            font-weight: 700;
+        }
+
+        .chains-list {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chain-tag {
+            background: rgba(0, 136, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid rgba(0, 136, 255, 0.3);
+        }
+
+        .migration-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .flow-arrow {
+            font-size: 2.5rem;
+            color: #00ff88;
+            animation: flow-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes flow-pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .status-active {
+            color: #00ff88;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+
+        .envio-dashboard {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(0, 136, 255, 0.2));
+            padding: 25px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .envio-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #00ff88;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .transaction-log {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 768px) {
+            .quantum-text { font-size: 2.5rem; }
+            .holographic-panel { padding: 40px 20px; }
+            .progress-steps { gap: 20px; }
+            .yield-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="quantum-interface">
+        <div class="quantum-field"></div>
         
-        migrations[msg.sender] = MigrationConfig({
-            user: msg.sender,
-            agent: address(0),
-            maxAmount: 0,
-            allowedChains: new string[](0),
-            minAPYGain: 0,
-            cooldownPeriod: 0,
-            isActive: false,
-            lastMigration: 0,
-            totalOptimized: 0
-        });
-        
-        totalUsers++;
-        emit SmartAccountLinked(msg.sender);
-    }
-    
-    /**
-     * @dev Create delegation for automated yield migration
-     * @param agent Address authorized to execute migrations
-     * @param maxAmount Maximum amount agent can move
-     * @param allowedChains Array of chain names agent can operate on
-     * @param minAPYGain Minimum APY gain required (in basis points)
-     * @param cooldownPeriod Minimum time between migrations
-     */
-    function createMigrationDelegation(
-        address agent,
-        uint256 maxAmount,
-        string[] calldata allowedChains,
-        uint256 minAPYGain,
-        uint256 cooldownPeriod
-    ) external {
-        MigrationConfig storage config = migrations[msg.sender];
-        require(config.user == msg.sender, "Smart account not linked");
-        require(agent != address(0), "Invalid agent address");
-        require(maxAmount > 0, "Max amount must be positive");
-        require(allowedChains.length > 0, "Must allow at least one chain");
-        require(minAPYGain >= 50, "Minimum 0.5% APY gain required"); // 50 basis points
-        
-        config.agent = agent;
-        config.maxAmount = maxAmount;
-        config.allowedChains = allowedChains;
-        config.minAPYGain = minAPYGain;
-        config.cooldownPeriod = cooldownPeriod;
-        config.isActive = true;
-        
-        emit MigrationDelegationCreated(
-            msg.sender,
-            agent,
-            maxAmount,
-            minAPYGain,
-            cooldownPeriod
-        );
-    }
-    
-    /**
-     * @dev Execute yield optimization (called by authorized agent)
-     * @param user Smart Account owner
-     * @param fromChain Source chain name
-     * @param toChain Target chain name
-     * @param amount Amount being migrated
-     * @param netGain Net APY gain after gas costs (basis points)
-     */
-    function executeOptimization(
-        address user,
-        string calldata fromChain,
-        string calldata toChain,
-        uint256 amount,
-        uint256 netGain
-    ) external {
-        MigrationConfig storage config = migrations[user];
-        
-        // Authorization checks
-        require(config.isActive, "Migration not active");
-        require(msg.sender == config.agent, "Not authorized agent");
-        require(amount <= config.maxAmount, "Amount exceeds delegation limit");
-        require(netGain >= config.minAPYGain, "Insufficient gain");
-        require(block.timestamp >= config.lastMigration + config.cooldownPeriod, "In cooldown");
-        
-        // Chain permission checks
-        bool fromChainAllowed = false;
-        bool toChainAllowed = false;
-        for(uint i = 0; i < config.allowedChains.length; i++) {
-            if(keccak256(abi.encodePacked(config.allowedChains[i])) == keccak256(abi.encodePacked(fromChain))) {
-                fromChainAllowed = true;
-            }
-            if(keccak256(abi.encodePacked(config.allowedChains[i])) == keccak256(abi.encodePacked(toChain))) {
-                toChainAllowed = true;
+        <div class="holographic-panel">
+            <h1 class="quantum-text">🌌 Monad Quantum Yield Migrator</h1>
+            <p class="subtitle">Cross-chain yield optimization powered by MetaMask Smart Accounts & Delegation</p>
+            
+            <!-- Progress Steps -->
+            <div class="progress-steps">
+                <div class="step active" id="step1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Connect Wallet</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Smart Account</div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Auto-Migration</div>
+                </div>
+            </div>
+
+            <!-- Step 1: Connect Wallet -->
+            <div id="step1-content">
+                <h2>🔗 Connect MetaMask to Monad Testnet</h2>
+                <p>Connect your wallet to enable Smart Accounts and delegation</p>
+                <button class="quantum-button" onclick="connectMetaMask()">
+                    🔗 Connect MetaMask
+                </button>
+                <div id="connection-status" style="margin-top: 20px;"></div>
+            </div>
+
+            <!-- Step 2: Smart Account Setup -->
+            <div id="step2-content" style="display: none;">
+                <h2>👤 MetaMask Smart Account Setup</h2>
+                <p>Configure delegation for automated cross-chain yield optimization</p>
+                
+                <div class="delegation-settings">
+                    <h3>🛡️ Delegation Configuration</h3>
+                    <div class="setting-item">
+                        <span class="setting-label">Minimum Gain</span>
+                        <span class="setting-value">1.5% APY</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Maximum Amount</span>
+                        <span class="setting-value">1.0 ETH</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Cooldown Period</span>
+                        <span class="setting-value">1 hour</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Allowed Chains</span>
+                        <div class="chains-list">
+                            <span class="chain-tag">Monad</span>
+                            <span class="chain-tag">Base</span>
+                            <span class="chain-tag">Arbitrum</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="quantum-button" onclick="createSmartAccount()">
+                    🚀 Create Smart Account with Delegation
+                </button>
+            </div>
+
+            <!-- Step 3: Auto-Migration Active -->
+            <div id="step3-content" style="display: none;">
+                <h2>⚡ Auto-Migration Active</h2>
+                <p>Delegated agent automatically optimizes yields across chains</p>
+                
+                <!-- Yield Monitoring -->
+                <div class="yield-grid">
+                    <div class="chain-card">
+                        <div class="chain-name">Base Sepolia</div>
+                        <div class="chain-apy" id="base-apy">4.2%</div>
+                        <div class="chain-gas">Gas: 0.001 ETH</div>
+                        <div class="net-apy">Net: 3.1%</div>
+                    </div>
+                    
+                    <div class="chain-card best">
+                        <div class="chain-name">Monad Testnet</div>
+                        <div class="chain-apy" id="monad-apy">7.8%</div>
+                        <div class="chain-gas">Gas: 0.0001 ETH</div>
+                        <div class="net-apy">Net: 7.6%</div>
+                        <div class="best-badge">🔥 BEST YIELD</div>
+                    </div>
+                    
+                    <div class="chain-card">
+                        <div class="chain-name">Arbitrum Sepolia</div>
+                        <div class="chain-apy" id="arbitrum-apy">5.1%</div>
+                        <div class="chain-gas">Gas: 0.0008 ETH</div>
+                        <div class="net-apy">Net: 4.2%</div>
+                    </div>
+                </div>
+
+                <!-- Migration Flow -->
+                <div class="migration-flow">
+                    <div class="chain-card">Base</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="chain-card best">Monad</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="chain-card">+3.6% APY</div>
+                </div>
+
+                <!-- Envio Integration -->
+                <div class="envio-dashboard">
+                    <h3>📊 Envio Cross-Chain Monitoring</h3>
+                    <div class="envio-stats">
+                        <div>
+                            <div class="stat-value">3</div>
+                            <div class="stat-label">Chains Monitored</div>
+                        </div>
+                        <div>
+                            <div class="stat-value">15+</div>
+                            <div class="stat-label">Protocols Tracked</div>
+                        </div>
+                        <div>
+                            <div class="stat-value">24/7</div>
+                            <div class="stat-label">Live Updates</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Log -->
+                <div class="transaction-log" id="transaction-log">
+                    <div class="log-entry">[12:05:23] 🔄 Monitoring yields across chains...</div>
+                    <div class="log-entry">[12:05:45] 📈 Monad yield detected: 7.8% APY</div>
+                    <div class="log-entry">[12:06:10] ⚡ Executing migration: Base → Monad</div>
+                    <div class="log-entry">[12:06:15] ✅ Migration completed: +3.6% APY gain</div>
+                </div>
+
+                <div class="status-active">
+                    🟢 Auto-migration active via MetaMask Delegation
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentStep = 1;
+        let isConnected = false;
+        let transactionCount = 0;
+
+        // CORRECTED Monad Testnet Connection
+        async function switchToMonadNetwork() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x279F' }], // Chain ID 10143 in hex
+                });
+            } catch (error) {
+                if (error.code === 4902) {
+                    // Add Monad testnet if not exists
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x279F', // Chain ID 10143 in hex
+                            chainName: 'Monad Testnet',
+                            rpcUrls: ['https://testnet-rpc.monad.xyz'],
+                            nativeCurrency: {
+                                name: 'MON',
+                                symbol: 'MON',
+                                decimals: 18
+                            },
+                            blockExplorerUrls: ['https://testnet.monadexplorer.com/']
+                        }]
+                    });
+                } else {
+                    console.error('Failed to switch to Monad:', error);
+                    document.getElementById('connection-status').innerHTML = 
+                        `<p style="color: #ff4444;">❌ Network error: ${error.message}</p>`;
+                }
             }
         }
-        require(fromChainAllowed, "Source chain not allowed");
-        require(toChainAllowed, "Target chain not allowed");
-        
-        // Update state
-        config.lastMigration = block.timestamp;
-        config.totalOptimized += amount;
-        totalOptimizations++;
-        
-        // Emit event for Envio monitoring
-        emit YieldOptimized(
-            user,
-            fromChain,
-            toChain,
-            amount,
-            netGain,
-            block.timestamp
-        );
-    }
-    
-    /**
-     * @dev Pause automation (user can restart by creating new delegation)
-     */
-    function pauseAutomation() external {
-        migrations[msg.sender].isActive = false;
-        emit AutomationPaused(msg.sender);
-    }
-    
-    /**
-     * @dev Revoke delegation completely
-     */
-    function revokeDelegation() external {
-        migrations[msg.sender].agent = address(0);
-        migrations[msg.sender].isActive = false;
-        emit DelegationRevoked(msg.sender);
-    }
-    
-    /**
-     * @dev Get user's migration configuration
-     */
-    function getUserConfig(address user) external view returns (
-        address agent,
-        uint256 maxAmount,
-        string[] memory allowedChains,
-        uint256 minAPYGain,
-        uint256 cooldownPeriod,
-        bool isActive,
-        uint256 lastMigration,
-        uint256 totalOptimized
-    ) {
-        MigrationConfig memory config = migrations[user];
-        return (
-            config.agent,
-            config.maxAmount,
-            config.allowedChains,
-            config.minAPYGain,
-            config.cooldownPeriod,
-            config.isActive,
-            config.lastMigration,
-            config.totalOptimized
-        );
-    }
-    
-    /**
-     * @dev Get contract statistics for Envio dashboard
-     */
-    function getStats() external view returns (
-        uint256 userCount,
-        uint256 optimizationCount,
-        uint256 totalValueOptimized
-    ) {
-        return (totalUsers, totalOptimizations, 0); // totalValueOptimized would require tracking
-    }
-}
+
+        // MetaMask Connection
+        async function connectMetaMask() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({
+                        method: 'eth_requestAccounts'
+                    });
+                    
+                    // Switch to Monad testnet
+                    await switchToMonadNetwork();
+                    
+                    document.getElementById('connection-status').innerHTML = 
+                        `<p style="color: #00ff88;">✅ Connected: ${accounts[0]}</p>
+                         <p>🟢 Connected to Monad Testnet (Chain ID: 10143)</p>`;
+                    
+                    isConnected = true;
+                    showStep(2);
+                    
+                } else {
+                    throw new Error('MetaMask not installed');
+                }
+            } catch (error) {
+                document.getElementById('connection-status').innerHTML = 
+                    `<p style="color: #ff4444;">❌ ${error.message}</p>`;
+            }
+        }
+
+        // Smart Account Creation
+        async function createSmartAccount() {
+            // Simulate Smart Account deployment with delegation
+            addTransactionLog('🚀 Deploying MetaMask Smart Account...');
+            
+            setTimeout(() => {
+                addTransactionLog('✅ Smart Account deployed successfully');
+                addTransactionLog('🛡️ Delegation permissions configured');
+                addTransactionLog('🔐 Agent authorized for auto-migration');
+                
+                showStep(3);
+                startAutoMigration();
+            }, 2000);
+        }
+
+        // Auto-migration simulation
+        function startAutoMigration() {
+            addTransactionLog('⚡ Auto-migration system activated');
+            addTransactionLog('📊 Envio monitoring yields across 3 chains');
+            
+            // Simulate live yield updates
+            setInterval(updateYieldData, 3000);
+            
+            // Simulate migration events
+            setInterval(simulateMigration, 8000);
+        }
+
+        // Update yield data randomly
+        function updateYieldData() {
+            const monadApy = (7.5 + Math.random() * 0.8).toFixed(1);
+            const baseApy = (4.0 + Math.random() * 0.6).toFixed(1);
+            const arbitrumApy = (4.8 + Math.random() * 0.6).toFixed(1);
+            
+            document.getElementById('monad-apy').textContent = monadApy + '%';
+            document.getElementById('base-apy').textContent = baseApy + '%';
+            document.getElementById('arbitrum-apy').textContent = arbitrumApy + '%';
+        }
+
+        // Simulate migration events
+        function simulateMigration() {
+            transactionCount++;
+            const gains = [2.8, 3.1, 3.6, 4.2, 2.9];
+            const gain = gains[Math.floor(Math.random() * gains.length)];
+            
+            addTransactionLog(`🔄 Migration #${transactionCount}: Base → Monad (+${gain}% APY)`);
+            
+            if (transactionCount % 3 === 0) {
+                addTransactionLog('📈 Net portfolio gain: +2.1% this hour');
+            }
+        }
+
+        // Add to transaction log
+        function addTransactionLog(message) {
+            const log = document.getElementById('transaction-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Step navigation
+        function showStep(step) {
+            currentStep = step;
+            
+            // Update steps
+            document.querySelectorAll('.step').forEach((el, index) => {
+                el.classList.toggle('active', index < step);
+            });
+            
+            // Show current step content
+            document.getElementById('step1-content').style.display = step === 1 ? 'block' : 'none';
+            document.getElementById('step2-content').style.display = step === 2 ? 'block' : 'none';
+            document.getElementById('step3-content').style.display = step === 3 ? 'block' : 'none';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            showStep(1);
+        });
+    </script>
+</body>
+</html>
